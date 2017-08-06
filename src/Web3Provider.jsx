@@ -123,8 +123,7 @@ class Web3Provider extends React.Component {
     next = next && next.toLowerCase();
     curr = curr && curr.toLowerCase();
     const didChange = curr && next && (curr !== next);
-
-    if (!isConstructor && didChange) {
+    if ((!isConstructor && didChange) || (didChange === undefined)) {
       this.setState({
         accountsError: null,
         accounts
