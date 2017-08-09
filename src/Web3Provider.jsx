@@ -199,7 +199,7 @@ class Web3Provider extends React.Component {
       accountUnavailableScreen: AccountUnavailableComponent
     } = this.props;
 
-    if (passive) {
+    if (passive && web3) {
       return this.props.children;
     }
 
