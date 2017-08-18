@@ -14,6 +14,7 @@ module.exports = {
     * Overriding the default to allow jsx to be resolved automatically.
     */
     extensions: ['.js', '.json', '.jsx'],
+    modules: ['node_modules'],
     /**
     * Access config from anywhere via `import settings from 'settings'``
     */
