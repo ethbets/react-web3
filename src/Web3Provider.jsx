@@ -23,7 +23,8 @@ const childContextTypes = {
     accounts: PropTypes.array,
     selectedAccount: PropTypes.string,
     network: PropTypes.string,
-    networkId: PropTypes.string
+    networkId: PropTypes.string,
+    web3: PropTypes.object
   })
 };
 
@@ -59,7 +60,8 @@ class Web3Provider extends React.Component {
         accounts: this.state.accounts,
         selectedAccount: this.state.accounts && this.state.accounts[0],
         network: getNetwork(this.state.networkId),
-        networkId: this.state.networkId
+        networkId: this.state.networkId,
+        web3: this.state.web3
       }
     };
   }
@@ -104,7 +106,6 @@ class Web3Provider extends React.Component {
    */
   fetchAccounts() {
     const ethAccounts = this.getAccounts();
-
     if (isEmpty(ethAccounts)) {
       this.state.web3 && this.state.web3.eth && this.state.web3.eth.getAccounts((err, accounts) => {
         if (err) {
