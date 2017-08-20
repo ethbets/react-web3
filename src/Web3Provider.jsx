@@ -7,7 +7,6 @@ const Web3Unavailable = require('./Web3Unavailable');
 const Web3 = require('web3');
 
 const ONE_SECOND = 1000;
-const ONE_MINUTE = ONE_SECOND * 60;
 const propTypes = {
   web3UnavailableScreen: PropTypes.any,
   accountUnavailableScreen: PropTypes.any,
@@ -71,7 +70,10 @@ class Web3Provider extends React.Component {
    * react to the user changing accounts or netowrks.
    */
   componentWillMount() {
-    this.setState({web3: new Web3(window.web3.currentProvider)});
+    if (window.web3 !== undefined)
+      this.setState({web3: new Web3(window.web3.currentProvider)});
+    else
+      this.setState({web3: undefined});
   }
   componentDidMount() {
     this.fetchAccounts();
@@ -96,7 +98,7 @@ class Web3Provider extends React.Component {
    */
   initNetworkPoll() {
     if (!this.networkInterval) {
-      this.networkInterval = setInterval(this.fetchNetwork, ONE_MINUTE);
+      this.networkInterval = setInterval(this.fetchNetwork, ONE_SECOND);
     }
   }
 
@@ -105,6 +107,8 @@ class Web3Provider extends React.Component {
    * @return {void}
    */
   fetchAccounts() {
+    if (this.state.web3 === undefined && window.web3 !== undefined)
+      this.setState({web3: new Web3(window.web3.currentProvider)});
     const ethAccounts = this.getAccounts();
     if (isEmpty(ethAccounts)) {
       this.state.web3 && this.state.web3.eth && this.state.web3.eth.getAccounts((err, accounts) => {
@@ -123,13 +127,13 @@ class Web3Provider extends React.Component {
 
   handleAccounts(accounts, isConstructor = false) {
     const { onChangeAccount } = this.props;
-    const { store } = this.context;
     let next = accounts[0];
     let curr = this.state.accounts[0];
     next = next && next.toLowerCase();
     curr = curr && curr.toLowerCase();
     const didChange = curr && next && (curr !== next);
     if (!isConstructor && (didChange || didChange === undefined)) {
+      this.state.web3.eth.defaultAccount = next;
       this.setState({
         accountsError: null,
         accounts
@@ -140,23 +144,6 @@ class Web3Provider extends React.Component {
     if (didChange && typeof onChangeAccount === 'function') {
       onChangeAccount(next);
     }
-
-    // If available, dispatch redux action
-    if (store && typeof store.dispatch === 'function') {
-      const didDefine = !curr && next;
-
-      if (didDefine || (isConstructor && next)) {
-        store.dispatch({
-          type: 'web3/RECEIVE_ACCOUNT',
-          address: next
-        });
-      } else if (didChange) {
-        store.dispatch({
-          type: 'web3/CHANGE_ACCOUNT',
-          address: next
-        })
-      }
-    }
   }
 
   /**
@@ -164,12 +151,13 @@ class Web3Provider extends React.Component {
    * @return {void}
    */
   fetchNetwork() {
-    this.state.web3 && this.state.web3.version && this.state.web3.version.getNetwork((err, netId) => {
+    this.state.web3 && this.state.web3.version.getNetwork((err, netId) => {
       if (err) {
         this.setState({
           networkError: err
         });
-      } else {
+      }
+      else if (this.state.networkId === null) {
         this.setState({
           networkError: null,
           networkId: netId
