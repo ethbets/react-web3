@@ -35,11 +35,9 @@ class Web3Provider extends React.Component {
 
   constructor(props, context) {
     super(props, context);
-    const accounts = this.getAccounts();
-
     this.state = {
       web3: null,
-      accounts,
+      accounts: [],
       networkId: null,
       networkError: null
     };
@@ -47,10 +45,6 @@ class Web3Provider extends React.Component {
     this.networkInterval = null;
     this.fetchAccounts = this.fetchAccounts.bind(this);
     this.fetchNetwork = this.fetchNetwork.bind(this);
-
-    if (accounts) {
-      this.handleAccounts(accounts, true);
-    }
   }
 
   getChildContext() {
@@ -106,10 +100,10 @@ class Web3Provider extends React.Component {
    * Update state regarding the availability of web3 and an ETH account.
    * @return {void}
    */
-  fetchAccounts() {
+  async fetchAccounts() {
     if (this.state.web3 === undefined && window.web3 !== undefined)
       this.setState({web3: new Web3(window.web3.currentProvider)});
-    const ethAccounts = this.getAccounts();
+    const ethAccounts = await this.getAccounts();
     if (isEmpty(ethAccounts)) {
       this.state.web3 && this.state.web3.eth && this.state.web3.eth.getAccounts((err, accounts) => {
         if (err) {
@@ -172,13 +166,17 @@ class Web3Provider extends React.Component {
    * @return {String}
    */
   getAccounts() {
-    try {
-      // throws if no account selected
-      const accounts = this.state.web3.eth.accounts;
-      return accounts;
-    } catch (e) {
-      return [];
-    }
+    // throws if no account selected
+    //const accounts = this.state.web3.eth.accounts;
+    
+    return new Promise((resolve, reject) => {
+      this.state.web3.eth.getAccounts((err, accounts) => {
+        if (err)
+          reject(err);
+        else
+          resolve(accounts);
+      });
+    });
   }
 
   render() {
