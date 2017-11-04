@@ -4,7 +4,7 @@ const isEmpty = require('lodash/isEmpty');
 const AccountUnavailable = require('./AccountUnavailable');
 const Web3Unavailable = require('./Web3Unavailable');
 // TODO Change to web3 1.0.0
-const Web3 = require('web3');
+const Web3 = require('web3/src');
 
 const ONE_SECOND = 1000;
 const propTypes = {
@@ -12,34 +12,28 @@ const propTypes = {
   accountUnavailableScreen: PropTypes.any,
   onChangeAccount: PropTypes.func
 };
+
 const defaultProps = {
   passive: false,
   web3UnavailableScreen: Web3Unavailable,
   accountUnavailableScreen: AccountUnavailable
 };
+
 const childContextTypes = {
-  web3: PropTypes.shape({
-    accounts: PropTypes.array,
+  web3Utils: PropTypes.shape({
     selectedAccount: PropTypes.string,
     network: PropTypes.string,
-    networkId: PropTypes.string,
-    web3: PropTypes.object
+    networkId: PropTypes.Number
   })
 };
 
 class Web3Provider extends React.Component {
-
-  static contextTypes = {
-    store: PropTypes.object
-  };
-
   constructor(props, context) {
     super(props, context);
     this.state = {
-      web3: null,
-      accounts: [],
       networkId: null,
-      networkError: null
+      networkError: null,
+      accounts: []
     };
     this.interval = null;
     this.networkInterval = null;
@@ -49,12 +43,10 @@ class Web3Provider extends React.Component {
 
   getChildContext() {
     return {
-      web3: {
-        accounts: this.state.accounts,
-        selectedAccount: this.state.accounts && this.state.accounts[0],
+      web3Utils: {
+        selectedAccount: this.state.accounts[0],
         network: getNetwork(this.state.networkId),
-        networkId: this.state.networkId,
-        web3: this.state.web3
+        networkId: this.state.networkId
       }
     };
   }
@@ -64,8 +56,10 @@ class Web3Provider extends React.Component {
    * react to the user changing accounts or netowrks.
    */
   componentWillMount() {
-    if (window.web3 !== undefined)
-      this.setState({web3: new Web3(window.web3.currentProvider)});
+    if (window.web3 !== undefined) {
+      window.web3js = new Web3(Web3.givenProvider || "ws://localhost:8546");
+      console.log(window.web3, window.web3js);
+    }
     else
       this.setState({web3: undefined});
   }
@@ -101,20 +95,13 @@ class Web3Provider extends React.Component {
    * @return {void}
    */
   async fetchAccounts() {
-    if (this.state.web3 === undefined && window.web3 !== undefined)
-      this.setState({web3: new Web3(window.web3.currentProvider)});
     const ethAccounts = await this.getAccounts();
     if (isEmpty(ethAccounts)) {
-      this.state.web3 && this.state.web3.eth && this.state.web3.eth.getAccounts((err, accounts) => {
-        if (err) {
-          this.setState({
-            accountsError: err
-          });
-        } else {
-          this.handleAccounts(accounts);
-        }
+      this.setState({
+        accountsError: 'No account available'
       });
-    } else {
+    }
+    else {
       this.handleAccounts(ethAccounts);
     }
   }
@@ -122,20 +109,25 @@ class Web3Provider extends React.Component {
   handleAccounts(accounts, isConstructor = false) {
     const { onChangeAccount } = this.props;
     let next = accounts[0];
+
     let curr = this.state.accounts[0];
     next = next && next.toLowerCase();
     curr = curr && curr.toLowerCase();
     const didChange = curr && next && (curr !== next);
     if (!isConstructor && (didChange || didChange === undefined)) {
-      this.state.web3.eth.defaultAccount = next;
       this.setState({
         accountsError: null,
         accounts
       });
     }
-
+    
     // If provided, execute callback
-    if (didChange && typeof onChangeAccount === 'function') {
+    if (didChange) {
+      console.log(next, curr);
+      this.setState({
+        selectedAccount: next
+      });
+      console.log("Changing account to:", next);
       onChangeAccount(next);
     }
   }
@@ -145,13 +137,9 @@ class Web3Provider extends React.Component {
    * @return {void}
    */
   fetchNetwork() {
-    this.state.web3 && this.state.web3.version.getNetwork((err, netId) => {
-      if (err) {
-        this.setState({
-          networkError: err
-        });
-      }
-      else if (this.state.networkId === null) {
+    window.web3js.eth.net.getId()
+    .then(netId => {
+      if (this.state.networkId != netId) {
         this.setState({
           networkError: null,
           networkId: netId
@@ -166,11 +154,8 @@ class Web3Provider extends React.Component {
    * @return {String}
    */
   getAccounts() {
-    // throws if no account selected
-    //const accounts = this.state.web3.eth.accounts;
-    
     return new Promise((resolve, reject) => {
-      this.state.web3.eth.getAccounts((err, accounts) => {
+      window.web3.eth.getAccounts((err, accounts) => {
         if (err)
           reject(err);
         else
@@ -181,16 +166,11 @@ class Web3Provider extends React.Component {
 
   render() {
     const {
-      passive,
       web3UnavailableScreen: Web3UnavailableComponent,
       accountUnavailableScreen: AccountUnavailableComponent
     } = this.props;
 
-    if (passive && this.state.web3) {
-      return this.props.children;
-    }
-
-    if (!this.state.web3) {
+    if (!window.web3) {
       return <Web3UnavailableComponent />;
     }
 
@@ -213,13 +193,13 @@ module.exports = Web3Provider;
 ============================================================================= */
 function getNetwork(networkId) {
   switch (networkId) {
-    case '1':
+    case 1:
       return 'MAINNET';
-    case '2':
+    case 2:
       return 'MORDEN';
-    case '3':
+    case 3:
       return 'ROPSTEN';
-    case '42':
+    case 42:
       return 'KOVAN';
     default:
       return 'UNKNOWN';
