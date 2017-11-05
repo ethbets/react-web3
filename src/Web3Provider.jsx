@@ -167,16 +167,16 @@ class Web3Provider extends React.Component {
   render() {
     const {
       web3UnavailableScreen: Web3UnavailableComponent,
-      accountUnavailableScreen: AccountUnavailableComponent
+      // accountUnavailableScreen: AccountUnavailableComponent
     } = this.props;
 
-    if (!window.web3) {
+    if (!window.web3 || !this.state.networkId) {
       return <Web3UnavailableComponent />;
     }
 
-    if (isEmpty(this.state.accounts)) {
-      return <AccountUnavailableComponent />;
-    }
+    // if (isEmpty(this.state.accounts)) {
+    //   return <AccountUnavailableComponent />;
+    // }
 
     return this.props.children;
   }
